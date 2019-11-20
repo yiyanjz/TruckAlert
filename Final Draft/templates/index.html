@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+{% load static %}
+{% load leaflet_tags %}
+    <head>
+
+				<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+
+				<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css" />
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js"></script>
+
+        		<script src="https://www.mapquestapi.com/sdk/leaflet/v2.2/mq-map.js?key=oByg6KBNARPdgniDeLKJYkKa3tOGvUYY"></script>
+        		<script src="https://www.mapquestapi.com/sdk/leaflet/v2.2/mq-routing.js?key=oByg6KBNARPdgniDeLKJYkKa3tOGvUYY"></script>
+				<script type="text/javascript" src="{% static 'dist/leaflet.ajax.js' %}" >	</script> <!-- this -->
+				<script type="text/javascript" src="{% static 'leaflet-groupedlayercontrol/leaflet.groupedlayercontrol.js' %}" ></script>
+
+
+    </head>
+
+    <body style='border:0; margin: 0'>
+        <div id='map' style='width: 100%; height:800px;'></div>
+
+				<script type="text/javascript">
+				// async getIncidences = function() {
+				//
+				//
+				// }
+            window.onload = async function() {
+
+
+
+                var map,
+                    dir;
+
+                map = L.map('map', {
+                    layers: MQ.mapLayer(),
+                    center: [ 36.50767916541658, -119.97070312500001 ],
+                    zoom: 9
+                });
+
+							// 	var points = new L.GeoJSON.ajax("{% url 'incidences' %}",{
+							// 		pointToLayer: function (feature, latlng) {
+	            //     return L.marker(latlng, {
+	            //         icon: L.icon({
+	            //             iconUrl: "static/img/red.png",
+	            //             iconSize: [24, 28],
+	            //             iconAnchor: [12, 28],
+	            //             popupAnchor: [0, -25]
+	            //         }),
+	            //         title: feature.properties.NAME,
+	            //         riseOnHover: true
+	            //     });
+	            // },
+							// onEachFeature: function(feature,layer){
+							// 	layer.bindPopup(feature.properties.name.toString());
+							// 	}
+							//
+							// });
+							const incidencesResponse = await fetch("{% url 'incidences' %}", {
+									method: "GET"
+								});
+								const incidencesJson = await incidencesResponse.json();
+							console.log(incidencesJson);
+							console.log("logging keys");
+							var incidentList = [];
+							for (var key in incidencesJson['features']) {
+								// Use geometry for point data
+								// properties for attribute data
+								var geometry = incidencesJson['features'][key]['geometry'];
+								var properties = incidencesJson['features'][key]['properties'];
+								console.log(incidencesJson['features'][key]);
+								incidentList.push({
+									lat: geometry['coordinates'][1],
+									lng: geometry['coordinates'][0],
+									weight: 90,
+									radius: 3
+								});
+								L.marker([ geometry['coordinates'][1], geometry['coordinates'][0] ])
+                    .addTo(map)
+                    .bindPopup('<strong>' + properties['name'] + '<br/>' + geometry['coordinates'][1] +', ' + geometry['coordinates'][0] +
+										'</strong><br/>is located here.')
+                    .openPopup();
+								// 0 is long
+								// 1 is lat
+							}
+							// TEST: add test point manually
+							// incidentList.push({
+							// 	lat: 42.867712,
+							// 	lng: -121.831718,
+							// 	weight: 5,
+							// 	radius: 3
+							// });
+							console.log("incident list");
+							console.log(incidentList);
+
+							// console.log("printing incidences");
+							// console.log("{% url 'incidences' %}");
+                dir = MQ.routing.directions();
+
+                dir.route({
+                    locations: [
+                        'merced ca',
+                        'oakland, ca'
+                    ],
+                    options: {
+                        avoids: ['toll road'],
+                        routeControlPointCollection: incidentList
+										}
+                });
+
+                map.addLayer(MQ.routing.routeLayer({
+                    directions: dir,
+                    fitBounds: true
+                }));
+								map.on("click", mapclicked);
+								function mapclicked(e) {
+								    console.log(e.latlng.wrap());
+								}
+
+								// TEST
+								// L.marker([ 42.867712, -121.831718 ])
+                //     .addTo(map)
+                //     .bindPopup('<strong>' + 'TEST' + '</strong><br/>is located here.')
+                //     .openPopup();
+
+
+			//datasets.addTo(map);
+							// points.addTo(map);
+            }
+        </script>
+				<!-- {% leaflet_map "gis" callback="window.our_layers" %} -->
+    </body>
+</html>
